@@ -22,6 +22,7 @@ This folder contains production deployment assets for the backend API using Dock
    - Edit `deploy/.env.production` with strong secrets and correct domain.
 3. Build and run API only (no registry) using convenience script:
    - `bash deploy/prod-deploy.sh`
+     - Script will load env from `deploy/.env` if present, else `deploy/.env.production`.
    - Options via env vars:
      - `IMAGE_NAME_API=fms-api:latest CONTAINER_NAME_API=fms-api bash deploy/prod-deploy.sh`
      - `ENV_FILE=deploy/.env.production bash deploy/prod-deploy.sh`

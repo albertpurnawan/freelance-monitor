@@ -34,14 +34,19 @@ HEALTH_PATH="${HEALTH_PATH:-/api/health}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
 BUILD_TARGET="${BUILD_TARGET:-runtime}"
 
-# ENV_FILE default: use deploy/.env.production if present
+# ENV_FILE default resolution: prefer deploy/.env, then deploy/.env.production
 ENV_FILE="${ENV_FILE:-}"
-if [[ -z "${ENV_FILE}" ]] && [[ -f "deploy/.env.production" ]]; then
-  ENV_FILE="deploy/.env.production"
+if [[ -z "${ENV_FILE}" ]]; then
+  if [[ -f "deploy/.env" ]]; then
+    ENV_FILE="deploy/.env"
+  elif [[ -f "deploy/.env.production" ]]; then
+    ENV_FILE="deploy/.env.production"
+  fi
 fi
 
 need_cleanup_env=false
 TMP_ENV_FILE=""
+TMP_DIR="${TMPDIR:-${ROOT_DIR}/deploy/.tmp}"
 
 cleanup() {
   if [[ "${need_cleanup_env}" == "true" && -n "${TMP_ENV_FILE}" && -f "${TMP_ENV_FILE}" ]]; then
@@ -80,7 +85,12 @@ if [[ -n "${ENV_FILE}" ]]; then
 else
   # Fallback: compose a minimal env file from current process environment
   echo "ENV_FILE not provided; composing temporary env file from current environment"
-  TMP_ENV_FILE="$(mktemp)"
+  mkdir -p "${TMP_DIR}" || true
+  TMP_ENV_FILE="$(mktemp -p "${TMP_DIR}" -t fms-env-XXXXXX || true)"
+  if [[ -z "${TMP_ENV_FILE}" ]]; then
+    echo "Failed to create temporary env file (check disk space: ${TMP_DIR})" >&2
+    exit 1
+  fi
   need_cleanup_env=true
   {
     echo "PORT=${PORT:-8080}"
@@ -101,8 +111,51 @@ else
     echo "SMTP_FROM=${SMTP_FROM:-}"
     echo "NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-}"
     echo "NEXT_PUBLIC_DEV_ALLOW_UNAUTH=false"
-  } > "${TMP_ENV_FILE}"
+  } > "${TMP_ENV_FILE}" || { echo "Failed to write ${TMP_ENV_FILE} (No space left?)" >&2; exit 1; }
   env_arg=(--env-file "${TMP_ENV_FILE}")
+fi
+
+# If PORT is defined in the env file, align container/host port mapping when defaults are still 8080
+detect_port_from_env() {
+  local file="$1"
+  local p
+  p=$(awk -F= '/^PORT=/{print $2}' "$file" | tail -n1 | tr -d '"' | tr -d "'" | tr -d '\r') || true
+  echo "$p"
+}
+
+ENV_SOURCE_FILE="${ENV_FILE:-${TMP_ENV_FILE}}"
+if [[ -f "${ENV_SOURCE_FILE}" ]]; then
+  ENV_PORT="$(detect_port_from_env "${ENV_SOURCE_FILE}")"
+  if [[ -n "${ENV_PORT}" ]] && [[ "${ENV_PORT}" =~ ^[0-9]+$ ]]; then
+    if [[ "${PORT_CONTAINER}" == "8080" && "${ENV_PORT}" != "8080" ]]; then
+      echo "Aligning PORT_CONTAINER to env PORT=${ENV_PORT}"
+      PORT_CONTAINER="${ENV_PORT}"
+    fi
+    if [[ "${PORT_HOST}" == "8080" && "${ENV_PORT}" != "8080" ]]; then
+      echo "Aligning PORT_HOST to env PORT=${ENV_PORT}"
+      PORT_HOST="${ENV_PORT}"
+    fi
+  fi
+fi
+
+# Validate required env keys exist and non-empty in the env file used
+env_val() {
+  local file="$1" key="$2"; awk -F= -v k="$2" '$1==k{print substr($0,index($0,$2))}' "$file" | tail -n1 | tr -d '\r' | sed -e 's/^\s*//' -e 's/^"\(.*\)"$/\1/' -e "s/'\(.*\)'/\1/" || true
+}
+
+if [[ -f "${ENV_SOURCE_FILE}" ]]; then
+  missing=()
+  # Required runtime keys for successful start
+  for k in PORT DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME DB_SSLMODE JWT_SECRET RESET_LINK_BASE NEXT_PUBLIC_BACKEND_URL; do
+    v="$(env_val "${ENV_SOURCE_FILE}" "$k")"
+    if [[ -z "${v}" ]]; then
+      missing+=("$k")
+    fi
+  done
+  if [[ ${#missing[@]:-0} -gt 0 ]]; then
+    echo "Missing required keys in ${ENV_SOURCE_FILE}: ${missing[*]}" >&2
+    exit 1
+  fi
 fi
 
 docker run -d \
@@ -126,4 +179,3 @@ until curl -fsS "http://127.0.0.1:${PORT_HOST}${HEALTH_PATH}" >/dev/null 2>&1; d
 done
 
 echo "✅ Deployment successful: ${CONTAINER_NAME_API} listening on :${PORT_HOST}"
-

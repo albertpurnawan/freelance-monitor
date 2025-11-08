@@ -33,16 +33,9 @@ COPY --from=builder /app/bin/seed /srv/seed
 RUN mkdir -p /srv/static/pdfs /srv/static/uploads/signed_offers \
     && chown -R 10001:10001 /srv/static
 
-# Environment defaults (override in deployment)
+# Minimal, non-sensitive defaults. Provide DB_* and JWT_* via runtime env or --env-file.
 ENV PORT=8080 \
-    GIN_MODE=release \
-    DB_HOST=postgres \
-    DB_PORT=5432 \
-    DB_USER=postgres \
-    DB_PASSWORD=postgres \
-    DB_NAME=freelance_monitor \
-    DB_SSLMODE=disable \
-    JWT_SECRET=change-me
+    GIN_MODE=release
 
 # Expose API port
 EXPOSE 8080
