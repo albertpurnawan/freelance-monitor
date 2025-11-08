@@ -152,7 +152,7 @@ if [[ -f "${ENV_SOURCE_FILE}" ]]; then
       missing+=("$k")
     fi
   done
-  if [[ ${#missing[@]:-0} -gt 0 ]]; then
+  if ((${#missing[@]} > 0)); then
     echo "Missing required keys in ${ENV_SOURCE_FILE}: ${missing[*]}" >&2
     exit 1
   fi
