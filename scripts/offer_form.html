@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Offer & Generate PDF</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; }
+    fieldset { border: 1px solid #ddd; padding: 16px; margin-bottom: 16px; }
+    label { display: block; margin: 8px 0; }
+    input, textarea, select { width: 100%; padding: 8px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    th, td { border: 1px solid #ddd; padding: 6px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .actions { display: flex; gap: 12px; }
+    .result { margin-top: 16px; }
+  </style>
+  <script>
+    const API_BASE = 'http://localhost:8080';
+
+    function addItemRow() {
+      const tbody = document.querySelector('#items tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" placeholder="Description" /></td>
+        <td><input type="number" min="0" step="1" placeholder="Qty" /></td>
+        <td><input type="number" min="0" step="0.01" placeholder="Unit Price" /></td>
+        <td><input type="number" min="0" step="0.01" placeholder="Total" /></td>
+        <td><button type="button" onclick="this.closest('tr').remove()">Remove</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    async function submitForm(evt) {
+      evt.preventDefault();
+      const clientId = parseInt(document.querySelector('#client_id').value || '0', 10);
+      const subject = document.querySelector('#subject').value.trim();
+      const totalPrice = parseFloat(document.querySelector('#total_price').value || '0');
+      const notes = document.querySelector('#notes').value.trim();
+      const date = document.querySelector('#date').value; // optional ISO8601
+
+      // Build items array
+      const rows = Array.from(document.querySelectorAll('#items tbody tr'));
+      const items = rows.map(row => {
+        const [descEl, qtyEl, upEl, totalEl] = row.querySelectorAll('input');
+        const desc = descEl.value.trim();
+        const qty = qtyEl.value ? parseFloat(qtyEl.value) : undefined;
+        const unit_price = upEl.value ? parseFloat(upEl.value) : undefined;
+        const total = totalEl.value ? parseFloat(totalEl.value) : undefined;
+        return { description: desc, qty, unit_price, total };
+      }).filter(it => it.description);
+
+      if (!clientId || !subject || !(totalPrice > 0)) {
+        alert('client_id, subject, and positive total_price are required');
+        return;
+      }
+
+      const payload = {
+        client_id: clientId,
+        subject,
+        total_price: totalPrice,
+        notes,
+        items: JSON.stringify(items),
+      };
+      if (date) payload.date = date; // backend will parse if format is valid
+
+      try {
+        const res = await fetch(`${API_BASE}/api/offers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        const link = document.querySelector('#pdf_link');
+        link.href = `${API_BASE}${data.pdf_url}`;
+        link.textContent = data.pdf_url;
+        document.querySelector('#result').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.querySelector('#add_row').addEventListener('click', addItemRow);
+      document.querySelector('#offer_form').addEventListener('submit', submitForm);
+      addItemRow();
+    });
+  </script>
+  </head>
+  <body>
+    <h1>Create Offer & Generate PDF</h1>
+    <form id="offer_form">
+      <fieldset>
+        <legend>Offer Details</legend>
+        <div class="row">
+          <label>Client ID <input id="client_id" type="number" min="1" required /></label>
+          <label>Date (ISO8601) <input id="date" type="datetime-local" /></label>
+        </div>
+        <label>Subject <input id="subject" type="text" required /></label>
+        <label>Total Price <input id="total_price" type="number" min="0" step="0.01" required /></label>
+        <label>Notes <textarea id="notes" rows="3"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Items</legend>
+        <table id="items">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="actions">
+          <button type="button" id="add_row">Add Row</button>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit">Create Offer & Generate PDF</button>
+      </div>
+    </form>
+
+    <div class="result">
+      <p>PDF URL: <a id="pdf_link" href="#" target="_blank"></a></p>
+      <pre id="result"></pre>
+    </div>
+
+    <p style="margin-top:24px;font-size:0.9em;color:#666;">Ensure the backend is running on <code>http://localhost:8080</code> and set <code>CORS_ALLOW_ORIGINS=*</code> for local testing.</p>
+  </body>
+</html>
+

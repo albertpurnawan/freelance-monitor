@@ -1,0 +1,11 @@
+.gocache/
+.gomodcache/
+.gopath/
+bin/
+**/*.test
+**/*.tmp
+**/*.log
+.git/
+node_modules/
+.env
+scripts/

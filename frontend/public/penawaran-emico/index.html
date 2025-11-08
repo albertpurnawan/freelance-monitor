@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Penawaran - PT Emico Mitra Samudera</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <div class="page">
+    <img src="assets/background.png" class="background" alt="Background Penawaran" />
+    <div class="overlay">
+      <div id="clientName" class="text" style="top:288px;left:360px;">PT Emico Mitra Samudera</div>
+      <div id="clientAddress" class="text small" style="top:318px;left:360px;">Jl. Kramat Raya No. 27, 2nd Floor Unit# E – F, Jakarta 10450, Indonesia</div>
+      <div id="clientContact" class="text small" style="top:344px;left:360px;">Telp: (62-21) 398 32108 | Fax: (62-21) 398 32107 | Email: EMS@emico.co.id</div>
+      <div id="letterNumber" class="text" style="top:288px;right:215px;">038/MSI-25/09/2025</div>
+      <div id="subject" class="text" style="top:332px;right:215px;">Penawaran Harga Domain</div>
+      <div id="date" class="text bold" style="top:388px;left:360px;">25 SEPTEMBER 2025</div>
+      <div id="paragraph1" class="text small" style="top:428px;left:360px;width:725px;">Dengan hormat,<br><br>Melalui surat ini, saya ingin menindaklanjuti hasil pembahasan mengenai pembelian domain <strong>emico.co.id</strong> dan hosting.</div>
+      <div id="serviceName" class="text" style="top:604px;left:422px;">Hosting dan Domain emico.co.id</div>
+      <div id="serviceCost" class="text" style="top:604px;left:830px;">Rp 586.128</div>
+      <div id="serviceDuration" class="text" style="top:604px;right:230px;">1 Tahun</div>
+      <div id="note" class="text small" style="top:676px;left:360px;width:760px;">Rincian di atas tidak termasuk dengan biaya pembuatan dan pengembangan tambahan fitur yang disesuaikan dengan kebutuhan klien.</div>
+      <div id="closing" class="text small" style="top:736px;left:360px;width:760px;">Demikian penawaran ini saya buat.<br>Jika ada hal yang perlu didiskusikan lebih lanjut, dapat menghubungi saya melalui nomor layanan WhatsApp: +62 851-5684-5984.</div>
+      <div id="signName" class="text" style="bottom:172px;left:360px;">Jonathan Albert</div>
+      <div id="signPosition" class="text small" style="bottom:148px;left:360px;">IT Solution</div>
+    </div>
+  </div>
+
+  <div class="editor">
+    <h3>🧩 Edit Konten via JSON</h3>
+    <textarea id="jsonInput">
+{
+  "clientName": "PT Emico Mitra Samudera",
+  "clientAddress": "Jl. Kramat Raya No. 27, 2nd Floor Unit# E – F, Jakarta 10450, Indonesia",
+  "clientContact": "Telp: (62-21) 398 32108 | Fax: (62-21) 398 32107 | Email: EMS@emico.co.id",
+  "letterNumber": "038/MSI-25/09/2025",
+  "subject": "Penawaran Harga Domain",
+  "date": "25 SEPTEMBER 2025",
+  "paragraph1": "Dengan hormat,<br><br>Melalui surat ini, saya ingin menindaklanjuti hasil pembahasan mengenai pembelian domain <strong>emico.co.id</strong> dan hosting.",
+  "serviceName": "Hosting dan Domain emico.co.id",
+  "serviceCost": "Rp 586.128",
+  "serviceDuration": "1 Tahun",
+  "note": "Rincian di atas tidak termasuk dengan biaya pembuatan dan pengembangan tambahan fitur yang disesuaikan dengan kebutuhan klien.",
+  "closing": "Demikian penawaran ini saya buat.<br>Jika ada hal yang perlu didiskusikan lebih lanjut, dapat menghubungi saya melalui nomor layanan WhatsApp: +62 851-5684-5984.",
+  "signName": "Jonathan Albert",
+  "signPosition": "IT Solution"
+}
+    </textarea>
+    <div class="buttons">
+      <button onclick="applyJSON()">Terapkan Perubahan</button>
+      <button onclick="exportPDF()">Export PDF</button>
+    </div>
+  </div>
+
+  <script>
+    function applyJSON() {
+      try {
+        const data = JSON.parse(document.getElementById("jsonInput").value);
+        Object.entries(data).forEach(([key, value]) => {
+          const el = document.getElementById(key);
+          if (el) el.innerHTML = value;
+        });
+      } catch (err) {
+        alert("❌ JSON tidak valid: " + err.message);
+      }
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
+      const page = document.querySelector(".page");
+      await pdf.html(page, {
+        html2canvas: { scale: 2 },
+        callback(doc) {
+          doc.save("Penawaran-PT-Emico-Mitra-Samudera.pdf");
+        }
+      });
+    }
+
+    applyJSON();
+  </script>
+</body>
+</html>

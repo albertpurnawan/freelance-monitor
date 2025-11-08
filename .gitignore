@@ -1,0 +1,25 @@
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Coverage & caches
+coverage/
+.eslintcache
+
+# Env files (keep example tracked)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Backend (Go)
+backend/.gocache/
+backend/.gomodcache/
+backend/coverage.out
+

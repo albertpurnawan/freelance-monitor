@@ -1,0 +1,19 @@
+[Unit]
+Description=Freelance Monitor System (Docker Compose)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/freelance-monitor-system/deploy
+Environment="COMPOSE_PROJECT_NAME=fms"
+RemainAfterExit=yes
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.production up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.production down
+TimeoutStartSec=0
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Penawaran - PT Emico Mitra Samudera</title>
+  <link rel="stylesheet" href="template.css" />
+  <!-- CDN jsPDF untuk export PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+  <div class="page">
+    <div class="overlay">
+      <header class="letter-header">
+        <div class="company-details">
+          <p id="companyName" class="company-name">PT Emico Mitra Samudera</p>
+          <p id="companyAddress" class="small">Jl. Kramat Raya No. 27, 2nd Floor Unit# E – F, Jakarta 10450, Indonesia</p>
+          <p id="companyContact" class="small">Telp: (62-21) 398 32108 | Fax: (62-21) 398 32107 | Email: EMS@emico.co.id</p>
+        </div>
+        <div class="letter-meta">
+          <p><span class="label">Nomor</span><span id="letterNumber">038/MSI-25/09/2025</span></p>
+          <p><span class="label">Tanggal</span><span id="date">25 September 2025</span></p>
+          <p><span class="label">Perihal</span><span id="subject">Penawaran Harga Domain &amp; Hosting</span></p>
+        </div>
+      </header>
+
+      <section class="client-section">
+        <p class="small">Kepada Yth.</p>
+        <p id="clientName" class="client-name">PT Emico Mitra Samudera</p>
+        <p id="clientAttention" class="small">Up. Ibu Christine</p>
+        <p id="clientAddress" class="small">Jl. Kramat Raya No. 27, 2nd Floor Unit# E – F, Jakarta 10450, Indonesia</p>
+      </section>
+
+      <section class="letter-body">
+        <p id="paragraph1" class="small">
+          Dengan hormat,<br><br>
+          Sehubungan dengan kebutuhan layanan digital perusahaan, bersama ini kami sampaikan proposal penawaran terbaik untuk pengelolaan domain, hosting, dan dukungan teknis terpadu yang siap mendukung operasional PT Emico Mitra Samudera.
+        </p>
+        <p id="paragraph2" class="small">
+          Penawaran berikut telah kami susun agar memudahkan proses implementasi, termasuk dukungan onboarding dan pemeliharaan berkala.
+        </p>
+      </section>
+
+      <section class="offer-details">
+        <h2 id="offerTitle">Rincian Produk &amp; Jasa</h2>
+        <div class="table-wrapper">
+          <table class="offer-table">
+            <thead>
+              <tr id="offerColumns"></tr>
+            </thead>
+            <tbody id="offerRows"></tbody>
+            <tfoot id="offerFooter"></tfoot>
+          </table>
+        </div>
+        <p id="offerValidity" class="small note">Penawaran berlaku hingga 30 September 2025 dan dapat diperbarui sesuai kebutuhan.</p>
+      </section>
+
+      <section class="notes">
+        <h3>Catatan Tambahan</h3>
+        <p id="note">
+          Rincian biaya di atas belum termasuk permintaan kustomisasi tambahan dan integrasi sistem pihak ketiga. Kami siap menyesuaikan paket layanan sesuai kebutuhan spesifik perusahaan Anda.
+        </p>
+        <p id="paymentTerms" class="small">
+          Ketentuan pembayaran: 50% di muka setelah persetujuan penawaran, 50% setelah layanan aktif sepenuhnya.
+        </p>
+      </section>
+
+      <section class="closing">
+        <p id="closing">
+          Terima kasih atas kesempatan dan kepercayaan yang diberikan kepada kami. Apabila Bapak/Ibu memerlukan informasi tambahan, mohon tidak ragu menghubungi kami melalui WhatsApp di +62 851-5684-5984 atau email support@emico.co.id.
+        </p>
+      </section>
+
+      <section class="signature-block">
+        <div class="signature-meta">
+          <p id="signCityDate" class="small">Jakarta, 25 September 2025</p>
+          <p class="small">Hormat kami,</p>
+        </div>
+        <div class="signature-area">
+          <div class="signature-line"></div>
+          <p id="signName" class="signature-name">Jonathan Albert</p>
+          <p id="signPosition" class="small">IT Solution Consultant</p>
+          <p id="signCompany" class="small">PT Emico Mitra Samudera</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="editor">
+    <h3>🧩 Edit Konten via JSON</h3>
+    <textarea id="jsonInput">
+{
+  "companyName": "PT Emico Mitra Samudera",
+  "companyAddress": "Jl. Kramat Raya No. 27, 2nd Floor Unit# E – F, Jakarta 10450, Indonesia",
+  "companyContact": "Telp: (62-21) 398 32108 | Fax: (62-21) 398 32107 | Email: EMS@emico.co.id",
+  "letterNumber": "038/MSI-25/09/2025",
+  "date": "25 September 2025",
+  "subject": "Penawaran Harga Domain & Hosting",
+  "clientName": "PT Emico Mitra Samudera",
+  "clientAttention": "Up. Ibu Christine",
+  "clientAddress": "Jl. Kramat Raya No. 27, 2nd Floor Unit# E – F, Jakarta 10450, Indonesia",
+  "paragraph1": "Dengan hormat,<br><br>Sehubungan dengan kebutuhan layanan digital perusahaan, bersama ini kami sampaikan proposal penawaran terbaik untuk pengelolaan domain, hosting, dan dukungan teknis terpadu yang siap mendukung operasional PT Emico Mitra Samudera.",
+  "paragraph2": "Penawaran berikut telah kami susun agar memudahkan proses implementasi, termasuk dukungan onboarding dan pemeliharaan berkala.",
+  "offerTitle": "Rincian Produk &amp; Jasa",
+  "offerTable": {
+    "columns": [
+      { "key": "service", "title": "Produk / Jasa" },
+      { "key": "description", "title": "Deskripsi" },
+      { "key": "duration", "title": "Durasi", "align": "center" },
+      { "key": "price", "title": "Harga (IDR)", "align": "right" }
+    ],
+    "rows": [
+      {
+        "service": "Registrasi Domain emico.co.id",
+        "description": "Perpanjangan domain .co.id termasuk pengaturan DNS dan monitoring ketidakaktifan.",
+        "duration": "1 Tahun",
+        "price": "245.000"
+      },
+      {
+        "service": "Hosting Premium",
+        "description": "Paket hosting 10 GB SSD, SSL gratis, backup harian, dan uptime SLA 99.9%.",
+        "duration": "1 Tahun",
+        "price": "310.000"
+      },
+      {
+        "service": "Dukungan Teknis",
+        "description": "Pendampingan onboarding, migrasi data, dan support teknis prioritas.",
+        "duration": "Termasuk",
+        "price": "31.128"
+      }
+    ]
+  },
+  "offerTotal": {
+    "label": "Total Investasi",
+    "value": "586.128",
+    "align": "right"
+  },
+  "offerValidity": "Penawaran berlaku hingga 30 September 2025 dan dapat diperbarui sesuai kebutuhan.",
+  "note": "Rincian biaya di atas belum termasuk permintaan kustomisasi tambahan dan integrasi sistem pihak ketiga. Kami siap menyesuaikan paket layanan sesuai kebutuhan spesifik perusahaan Anda.",
+  "paymentTerms": "Ketentuan pembayaran: 50% di muka setelah persetujuan penawaran, 50% setelah layanan aktif sepenuhnya.",
+  "closing": "Terima kasih atas kesempatan dan kepercayaan yang diberikan kepada kami. Apabila Bapak/Ibu memerlukan informasi tambahan, mohon tidak ragu menghubungi kami melalui WhatsApp di +62 851-5684-5984 atau email support@emico.co.id.",
+  "signCityDate": "Jakarta, 25 September 2025",
+  "signName": "Jonathan Albert",
+  "signPosition": "IT Solution Consultant",
+  "signCompany": "PT Emico Mitra Samudera"
+}
+    </textarea>
+    <div class="buttons">
+      <button onclick="applyJSON()">Terapkan Perubahan</button>
+      <button onclick="exportPDF()">Export PDF</button>
+    </div>
+  </div>
+
+  <script>
+    let lastColumnCount = 0;
+
+    function renderOfferTable(tableData) {
+      const columnsRow = document.getElementById("offerColumns");
+      const tableBody = document.getElementById("offerRows");
+
+      if (!columnsRow || !tableBody) return;
+
+      if (!tableData || !Array.isArray(tableData.columns) || !Array.isArray(tableData.rows)) {
+        columnsRow.innerHTML = "";
+        tableBody.innerHTML = "";
+        lastColumnCount = 0;
+        return;
+      }
+
+      lastColumnCount = tableData.columns.length;
+
+      columnsRow.innerHTML = tableData.columns
+        .map(
+          (column) => `<th${column.align ? ` data-align="${column.align}"` : ""}>${column.title || ""}</th>`
+        )
+        .join("");
+
+      tableBody.innerHTML = tableData.rows
+        .map((row) => {
+          const cells = tableData.columns
+            .map((column) => {
+              const value = row[column.key] ?? "";
+              const alignAttr = column.align ? ` data-align="${column.align}"` : "";
+              return `<td${alignAttr}>${value}</td>`;
+            })
+            .join("");
+          return `<tr>${cells}</tr>`;
+        })
+        .join("");
+    }
+
+    function renderOfferFooter(totalData) {
+      const footer = document.getElementById("offerFooter");
+      if (!footer) return;
+
+      footer.innerHTML = "";
+      if (!totalData) return;
+
+      let footerData = totalData;
+      if (typeof footerData === "string") {
+        footerData = { label: "Total", value: footerData, align: "right" };
+      }
+
+      const columns = lastColumnCount || 2;
+      if (columns <= 1) {
+        footer.innerHTML = `<tr><td>${(footerData.label || "Total")} : ${footerData.value || ""}</td></tr>`;
+        return;
+      }
+
+      const labelSpan = Math.max(1, columns - 1);
+      const valueAlign = footerData.align ? ` data-align="${footerData.align}"` : "";
+
+      footer.innerHTML = `
+        <tr>
+          <td class="label" colspan="${labelSpan}">${footerData.label || ""}</td>
+          <td${valueAlign}>${footerData.value || ""}</td>
+        </tr>
+      `;
+    }
+
+    function applyJSON() {
+      try {
+        const data = JSON.parse(document.getElementById("jsonInput").value);
+        if (!data.offerTable && Array.isArray(data.offerItems)) {
+          data.offerTable = {
+            columns: [
+              { key: "name", title: "Produk / Jasa" },
+              { key: "description", title: "Deskripsi" },
+              { key: "duration", title: "Durasi", align: "center" },
+              { key: "price", title: "Harga", align: "right" }
+            ],
+            rows: data.offerItems
+          };
+        }
+
+        renderOfferTable(data.offerTable);
+        renderOfferFooter(data.offerTotal || data.grandTotal);
+
+        Object.entries(data).forEach(([key, value]) => {
+          if (key === "offerTable" || key === "offerTotal" || key === "offerItems" || key === "grandTotal") {
+            return;
+          }
+
+          const el = document.getElementById(key);
+          if (el) {
+            el.innerHTML = value;
+          }
+        });
+      } catch (err) {
+        alert("❌ JSON tidak valid: " + err.message);
+      }
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: "a4"
+      });
+      const page = document.querySelector(".page");
+      await pdf.html(page, {
+        callback: function (doc) {
+          doc.save("Penawaran-PT-Emico-Mitra-Samudera.pdf");
+        },
+        html2canvas: { scale: 2 }
+      });
+    }
+    applyJSON();
+  </script>
+</body>
+</html>

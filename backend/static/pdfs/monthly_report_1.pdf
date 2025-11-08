@@ -1,0 +1,67 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 485 >>
+stream
+BT
+/F1 12 Tf
+72 812 Td
+14 TL
+(Monitoring Solusi Indonesia) Tj
+T*
+(Laporan Bulanan Layanan) Tj
+T*
+() Tj
+T*
+(Periode: November 2025) Tj
+T*
+(Client: emico) Tj
+T*
+(Layanan: emico.co.id \(domain\)) Tj
+T*
+() Tj
+T*
+(Rata-rata Uptime: 0.00%) Tj
+T*
+(Rata-rata Respon: 1 ms) Tj
+T*
+(Total Downtime: 274 menit) Tj
+T*
+(Alert Dibuka: 274) Tj
+T*
+(Alert Terselesaikan: 5019) Tj
+T*
+(Jam Maintenance: 0.00 jam) Tj
+T*
+() Tj
+T*
+(Aktivitas Pemeliharaan:) Tj
+T*
+(1. Monthly aggregation from raw logs) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000776 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+846
+%EOF

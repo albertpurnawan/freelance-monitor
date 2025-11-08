@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: freelance_monitor_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: freelance_monitor_api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    # Bind to loopback only; fronted by Nginx on the host
+    ports:
+      - "127.0.0.1:8080:8080"
+    # Persist generated files like PDFs and uploads
+    volumes:
+      - static_data:/srv/static
+
+  seed:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: freelance_monitor_seed
+    restart: "no"
+    env_file:
+      - .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    # Run once to perform initial data seeding/migrations if needed
+    command: ["/srv/seed"]
+
+volumes:
+  db_data:
+  static_data:
