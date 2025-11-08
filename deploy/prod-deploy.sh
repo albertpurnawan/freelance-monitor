@@ -190,8 +190,8 @@ detect_compose_network() {
   cid=$($cmd -f "${COMPOSE_FILE}" ps -q db 2>/dev/null | tail -n1 || true)
   if [[ -z "$cid" ]]; then
     if [[ "${AUTO_START_DB}" == "true" ]]; then
-      echo "DB container not running; starting via compose..."
-      $cmd -f "${COMPOSE_FILE}" up -d db || return 1
+      echo "DB container not running; starting via compose..." >&2
+      $cmd -f "${COMPOSE_FILE}" up -d db >/dev/null 2>&1 || return 1
       # Re-fetch id
       cid=$($cmd -f "${COMPOSE_FILE}" ps -q db 2>/dev/null | tail -n1 || true)
     fi
@@ -199,7 +199,7 @@ detect_compose_network() {
   [[ -n "$cid" ]] || return 1
   # Inspect network name(s)
   local net
-  net=$(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{printf "%s" $n}}{{end}}' "$cid" 2>/dev/null | awk '{print $1}')
+  net=$(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{printf "%s " $n}}{{end}}' "$cid" 2>/dev/null | awk '{print $1}')
   [[ -n "$net" ]] || return 1
   echo "$net"
 }
