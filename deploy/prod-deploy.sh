@@ -33,6 +33,9 @@ STATIC_VOLUME_NAME="${STATIC_VOLUME_NAME:-fms_static}"
 HEALTH_PATH="${HEALTH_PATH:-/api/health}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
 BUILD_TARGET="${BUILD_TARGET:-runtime}"
+DOCKER_NETWORK="${DOCKER_NETWORK:-}"
+AUTO_START_DB="${AUTO_START_DB:-true}"
+COMPOSE_FILE="${COMPOSE_FILE:-deploy/docker-compose.prod.yml}"
 
 # ENV_FILE default resolution: prefer deploy/.env, then deploy/.env.production
 ENV_FILE="${ENV_FILE:-}"
@@ -158,11 +161,76 @@ if [[ -f "${ENV_SOURCE_FILE}" ]]; then
   fi
 fi
 
+# Determine DB host from env file for network guidance
+ENV_DB_HOST=""
+if [[ -f "${ENV_SOURCE_FILE}" ]]; then
+  ENV_DB_HOST="$(env_val "${ENV_SOURCE_FILE}" "DB_HOST")"
+fi
+
+# Helper: choose docker compose command if available
+compose_cmd() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    echo "docker compose"
+    return 0
+  fi
+  if command -v docker-compose >/dev/null 2>&1; then
+    echo "docker-compose"
+    return 0
+  fi
+  return 1
+}
+
+# Try to auto-detect compose network of the db service
+detect_compose_network() {
+  local cmd
+  cmd=$(compose_cmd) || return 1
+  [[ -f "${COMPOSE_FILE}" ]] || return 1
+  # Get db container id
+  local cid
+  cid=$($cmd -f "${COMPOSE_FILE}" ps -q db 2>/dev/null | tail -n1 || true)
+  if [[ -z "$cid" ]]; then
+    if [[ "${AUTO_START_DB}" == "true" ]]; then
+      echo "DB container not running; starting via compose..."
+      $cmd -f "${COMPOSE_FILE}" up -d db || return 1
+      # Re-fetch id
+      cid=$($cmd -f "${COMPOSE_FILE}" ps -q db 2>/dev/null | tail -n1 || true)
+    fi
+  fi
+  [[ -n "$cid" ]] || return 1
+  # Inspect network name(s)
+  local net
+  net=$(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{printf "%s" $n}}{{end}}' "$cid" 2>/dev/null | awk '{print $1}')
+  [[ -n "$net" ]] || return 1
+  echo "$net"
+}
+
+# Network args
+net_args=()
+if [[ -n "${DOCKER_NETWORK}" ]]; then
+  net_args=(--network "${DOCKER_NETWORK}")
+else
+  # If DB_HOST points to a compose service (e.g., 'db'), require explicit network
+  if [[ "${ENV_DB_HOST}" == "db" || "${ENV_DB_HOST}" == "freelance_monitor_db" ]]; then
+    auto_net="$(detect_compose_network || true)"
+    if [[ -n "$auto_net" ]]; then
+      echo "Auto-detected compose network: $auto_net"
+      net_args=(--network "$auto_net")
+    else
+      echo "DB_HOST='${ENV_DB_HOST}' requires the API container to join the same Docker network as the Postgres service." >&2
+      echo "- Tried to auto-detect via compose file '${COMPOSE_FILE}', but failed." >&2
+      echo "- Ensure docker compose is installed and the db service is up, or pass DOCKER_NETWORK explicitly." >&2
+      exit 1
+    fi
+  fi
+fi
+
 docker run -d \
   -p "${PORT_HOST}:${PORT_CONTAINER}" \
   --name "${CONTAINER_NAME_API}" \
   --restart unless-stopped \
   -v "${STATIC_VOLUME_NAME}:/srv/static" \
+  --add-host=host.docker.internal:host-gateway \
+  "${net_args[@]}" \
   "${env_arg[@]}" \
   "${IMAGE_NAME_API}"
 
