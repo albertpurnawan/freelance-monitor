@@ -31,7 +31,7 @@ PORT_HOST="${PORT_HOST:-8080}"
 PORT_CONTAINER="${PORT_CONTAINER:-8080}"
 STATIC_VOLUME_NAME="${STATIC_VOLUME_NAME:-fms_static}"
 HEALTH_PATH="${HEALTH_PATH:-/api/health}"
-HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
+HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-120}"
 BUILD_TARGET="${BUILD_TARGET:-runtime}"
 DOCKER_NETWORK="${DOCKER_NETWORK:-}"
 AUTO_START_DB="${AUTO_START_DB:-true}"
@@ -166,6 +166,10 @@ ENV_DB_HOST=""
 if [[ -f "${ENV_SOURCE_FILE}" ]]; then
   ENV_DB_HOST="$(env_val "${ENV_SOURCE_FILE}" "DB_HOST")"
 fi
+ENV_DB_PORT=""
+if [[ -f "${ENV_SOURCE_FILE}" ]]; then
+  ENV_DB_PORT="$(env_val "${ENV_SOURCE_FILE}" "DB_PORT")"
+fi
 
 # Helper: choose docker compose command if available
 compose_cmd() {
@@ -232,6 +236,11 @@ docker run -d \
   --add-host=host.docker.internal:host-gateway \
   "${net_args[@]}" \
   "${env_arg[@]}" \
+  $( if [[ "${ENV_DB_HOST}" == "db" || "${ENV_DB_HOST}" == "freelance_monitor_db" ]]; then \
+       if [[ -n "${ENV_DB_PORT}" && "${ENV_DB_PORT}" != "5432" ]]; then \
+         echo -n "-e DB_PORT=5432"; \
+       fi; \
+     fi ) \
   "${IMAGE_NAME_API}"
 
 echo "[6/6] Waiting for health at http://127.0.0.1:${PORT_HOST}${HEALTH_PATH} (timeout: ${HEALTH_TIMEOUT}s)"
