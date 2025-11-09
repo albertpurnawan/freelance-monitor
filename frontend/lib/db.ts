@@ -4,7 +4,18 @@
 import { neon } from "@neondatabase/serverless"
 import type { Client, Service, Offer, MonitoringAlert } from "./types"
 
-const sql = neon(process.env.NEON_DATABASE_URL || "")
+// Initialize Neon SQL tag lazily and avoid throwing at import time during Next.js build
+// When NEON_DATABASE_URL is not set, we provide a tag function that errors upon use
+type SqlTag = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>
+const sql: SqlTag = (() => {
+  const conn = process.env.NEON_DATABASE_URL
+  if (conn && conn.trim() !== "") {
+    return neon(conn)
+  }
+  return (async () => {
+    throw new Error("NEON_DATABASE_URL not set; database queries are unavailable at build/runtime without configuration")
+  }) as unknown as SqlTag
+})()
 
 function transformRow(row: any): any {
   if (!row) return row
