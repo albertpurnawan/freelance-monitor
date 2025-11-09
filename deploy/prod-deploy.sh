@@ -271,6 +271,13 @@ docker run -d \
   "${IMAGE_NAME_API}"
 
 echo "[7/8] Starting Web container from ${IMAGE_NAME_WEB}..."
+FORCE_WEB_CONTAINER_PORT_80="${FORCE_WEB_CONTAINER_PORT_80:-true}"
+if [[ "${FORCE_WEB_CONTAINER_PORT_80}" == "true" ]]; then
+  if [[ "${WEB_PORT_CONTAINER}" != "80" ]]; then
+    echo "Forcing WEB container port to 80"
+    WEB_PORT_CONTAINER="80"
+  fi
+fi
 docker run -d \
   -p "${WEB_BIND_ADDRESS}:${WEB_PORT_HOST}:${WEB_PORT_CONTAINER}" \
   --name "${CONTAINER_NAME_WEB}" \
