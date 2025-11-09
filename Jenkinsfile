@@ -152,7 +152,7 @@ NEXT_PUBLIC_DEV_ALLOW_UNAUTH=false
       }
     }
 
-    stage('Deploy (Local Docker)') {
+    stage('Deploy (Prod Script)') {
       when {
         anyOf {
           branch 'main'
@@ -160,20 +160,26 @@ NEXT_PUBLIC_DEV_ALLOW_UNAUTH=false
         }
       }
       steps {
-        script {
-          echo "🚀 Deploying ${env.IMAGE_REPO}:${env.IMAGE_TAG} on this server..."
-          sh '''
-            set -euxo pipefail
-            docker rm -f freelance-monitor-api || true
-            docker run -d \
-              -p ${params.PORT}:${params.PORT} \
-              --name freelance-monitor-api \
-              --restart unless-stopped \
-              -v fms_static:/srv/static \
-              --env-file deploy/.env.production \
-              ${IMAGE_REPO}:${IMAGE_TAG}
-          '''
-        }
+        sh '''
+          set -euxo pipefail
+          # Align script with pipeline env
+          export IMAGE_NAME_API="${IMAGE_REPO}:${IMAGE_TAG}"
+          export CONTAINER_NAME_API="freelance-monitor-api"
+          export PORT_HOST="${params.PORT}"
+          export PORT_CONTAINER="${params.PORT}"
+          export STATIC_VOLUME_NAME="fms_static"
+          export ENV_FILE="deploy/.env.production"
+          # Frontend
+          export IMAGE_NAME_WEB="freelance-monitor-web:latest"
+          export CONTAINER_NAME_WEB="freelance-monitor-web"
+          export NEXT_PUBLIC_BACKEND_URL_BUILD="${params.NEXT_PUBLIC_BACKEND_URL}"
+          export NEXT_PUBLIC_DEV_ALLOW_UNAUTH_BUILD="false"
+          # Optional: bind addresses
+          export BIND_ADDRESS="0.0.0.0"
+          export WEB_BIND_ADDRESS="0.0.0.0"
+          # Run unified prod deploy script (builds images and replaces containers)
+          bash deploy/prod-deploy.sh
+        '''
       }
     }
   }
