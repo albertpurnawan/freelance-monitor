@@ -74,7 +74,6 @@ if ! docker volume inspect "${STATIC_VOLUME_NAME}" >/dev/null 2>&1; then
   docker volume create "${STATIC_VOLUME_NAME}" >/dev/null
 fi
 
-echo "[4/8] Building frontend image: ${IMAGE_NAME_WEB}"
 IMAGE_NAME_WEB="${IMAGE_NAME_WEB:-freelance-monitor-web:latest}"
 CONTAINER_NAME_WEB="${CONTAINER_NAME_WEB:-freelance-monitor-web}"
 WEB_PORT_HOST="${WEB_PORT_HOST:-30002}"
@@ -82,6 +81,7 @@ WEB_PORT_CONTAINER="${WEB_PORT_CONTAINER:-4000}"
 WEB_BIND_ADDRESS="${WEB_BIND_ADDRESS:-0.0.0.0}"
 NEXT_PUBLIC_BACKEND_URL_BUILD="${NEXT_PUBLIC_BACKEND_URL_BUILD:-}"
 NEXT_PUBLIC_DEV_ALLOW_UNAUTH_BUILD="${NEXT_PUBLIC_DEV_ALLOW_UNAUTH_BUILD:-false}"
+echo "[4/8] Building frontend image: ${IMAGE_NAME_WEB}"
 
 docker build \
   --build-arg NEXT_PUBLIC_BACKEND_URL="${NEXT_PUBLIC_BACKEND_URL_BUILD:-${NEXT_PUBLIC_BACKEND_URL:-}}" \
