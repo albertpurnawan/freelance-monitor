@@ -1,5 +1,9 @@
 pipeline {
   agent any
+  triggers {
+    // Automatically build on new changes (poll SCM every 5 minutes)
+    pollSCM('H/5 * * * *')
+  }
   parameters {
     // --- App runtime env ---
     string(name: 'PORT', defaultValue: '8080', description: 'API port')
@@ -67,10 +71,16 @@ pipeline {
     stage('Go Test') {
       steps {
         dir('backend') {
-          sh 'mkdir -p .gomodcache .gocache'
-          sh 'go mod tidy'
-          sh 'go fmt ./...'
-          sh 'go test ./... -cover'
+          sh '''
+            set -euxo pipefail
+            mkdir -p .gomodcache .gocache
+            go mod tidy
+            go fmt ./...
+            # produce JUnit XML for test reporting
+            go install gotest.tools/gotestsum@latest
+            GOTESTSUM=$(go env GOPATH)/bin/gotestsum
+            $GOTESTSUM --junitfile test-report.xml --format testname -- -coverprofile=coverage.out ./... || true
+          '''
         }
       }
     }
@@ -142,22 +152,26 @@ NEXT_PUBLIC_DEV_ALLOW_UNAUTH=false
       }
     }
 
-    stage('Deploy (SSH)') {
-      when { expression { return params.DEPLOY == true } }
+    stage('Deploy (Local Docker)') {
+      when {
+        anyOf {
+          branch 'main'
+          expression { return params.DEPLOY == true }
+        }
+      }
       steps {
-        // Example using SSH to run deploy script on server; requires Jenkins SSH credentials
-        // Configure credentialsId 'prod-server-ssh' and SERVER_HOST env var.
-        sshagent (credentials: ['prod-server-ssh']) {
+        script {
+          echo "🚀 Deploying ${env.IMAGE_REPO}:${env.IMAGE_TAG} on this server..."
           sh '''
-          set -e
-          if [ "${SERVER_HOST}" = "user@server" ] || [ -z "${SERVER_HOST}" ]; then
-            echo "SERVER_HOST must be provided" >&2
-            exit 1
-          fi
-          # Copy env file to server
-          scp -o StrictHostKeyChecking=no deploy/.env.production $SERVER_HOST:/opt/freelance-monitor-system/deploy/.env.production
-          # Trigger deploy (build & up)
-          ssh -o StrictHostKeyChecking=no $SERVER_HOST 'cd /opt/freelance-monitor-system/deploy && ./deploy.sh'
+            set -euxo pipefail
+            docker rm -f freelance-monitor-api || true
+            docker run -d \
+              -p ${params.PORT}:${params.PORT} \
+              --name freelance-monitor-api \
+              --restart unless-stopped \
+              -v fms_static:/srv/static \
+              --env-file deploy/.env.production \
+              ${IMAGE_REPO}:${IMAGE_TAG}
           '''
         }
       }
@@ -165,204 +179,8 @@ NEXT_PUBLIC_DEV_ALLOW_UNAUTH=false
   }
   post {
     always {
-      junit allowEmptyResults: true, testResults: 'backend/**/TEST-*.xml'
-      archiveArtifacts artifacts: 'deploy/**, backend/Dockerfile, docker-compose.yml, README.md', fingerprint: true, onlyIfSuccessful: false
-    }
-  }
-}
-pipeline {
-  agent {
-    docker {
-      image 'node:20'
-      args '-u 0:0 -v /var/run/docker.sock:/var/run/docker.sock'
-      reuseNode true
-    }
-  }
-
-  options {
-    timestamps()
-    ansiColor('xterm')
-  }
-
-  environment {
-    // Fallback defaults; override via Jenkins Global/Node env
-    IMAGE_NAME_API = "${env.IMAGE_NAME_API ?: 'freelance-monitor-api:latest'}"
-    CONTAINER_NAME_API = "${env.CONTAINER_NAME_API ?: 'freelance-monitor-api'}"
-    PORT_HOST = "${env.PORT_HOST ?: '8080'}"
-    PORT_CONTAINER = "${env.PORT_CONTAINER ?: '8080'}"
-    // Optional named volume for persistent /srv/static
-    STATIC_VOLUME_NAME = "${env.STATIC_VOLUME_NAME ?: 'fms_static'}"
-
-    // Backend runtime env (read by the container)
-    PORT = "${env.PORT ?: '8080'}"
-    GIN_MODE = "${env.GIN_MODE ?: 'release'}"
-    DB_HOST = "${env.DB_HOST ?: ''}"
-    DB_PORT = "${env.DB_PORT ?: '5432'}"
-    DB_USER = "${env.DB_USER ?: ''}"
-    DB_PASSWORD = "${env.DB_PASSWORD ?: ''}"
-    DB_NAME = "${env.DB_NAME ?: ''}"
-    DB_SSLMODE = "${env.DB_SSLMODE ?: 'disable'}"
-    JWT_SECRET = "${env.JWT_SECRET ?: ''}"
-    JWT_TTL_SECONDS = "${env.JWT_TTL_SECONDS ?: '3600'}"
-    RESET_LINK_BASE = "${env.RESET_LINK_BASE ?: ''}"
-    SMTP_HOST = "${env.SMTP_HOST ?: ''}"
-    SMTP_PORT = "${env.SMTP_PORT ?: '587'}"
-    SMTP_USER = "${env.SMTP_USER ?: ''}"
-    SMTP_PASSWORD = "${env.SMTP_PASSWORD ?: ''}"
-    SMTP_FROM = "${env.SMTP_FROM ?: ''}"
-    NEXT_PUBLIC_BACKEND_URL = "${env.NEXT_PUBLIC_BACKEND_URL ?: ''}"
-
-    // Optional: resolve sensitive env via Jenkins Credentials IDs
-    JWT_SECRET_CREDENTIALS_ID_API = "${env.JWT_SECRET_CREDENTIALS_ID_API ?: ''}"
-    DB_PASSWORD_CREDENTIALS_ID_API = "${env.DB_PASSWORD_CREDENTIALS_ID_API ?: ''}"
-  }
-
-  stages {
-    stage('Resolve config') {
-      steps {
-        script {
-          if (!env.JWT_SECRET?.trim() && env.JWT_SECRET_CREDENTIALS_ID_API?.trim()) {
-            withCredentials([string(credentialsId: env.JWT_SECRET_CREDENTIALS_ID_API, variable: 'JWT_SECRET_RESOLVED')]) {
-              env.JWT_SECRET = JWT_SECRET_RESOLVED
-            }
-          }
-          if (!env.DB_PASSWORD?.trim() && env.DB_PASSWORD_CREDENTIALS_ID_API?.trim()) {
-            withCredentials([string(credentialsId: env.DB_PASSWORD_CREDENTIALS_ID_API, variable: 'DB_PASSWORD_RESOLVED')]) {
-              env.DB_PASSWORD = DB_PASSWORD_RESOLVED
-            }
-          }
-        }
-      }
-    }
-
-    stage('Validate params') {
-      steps {
-        script {
-          sh '''
-            set -e
-            [ -n "${CONTAINER_NAME_API:-}" ] || { echo "CONTAINER_NAME_API is required (env)" >&2; exit 1; }
-            [ -n "${IMAGE_NAME_API:-}" ] || { echo "IMAGE_NAME_API is required (env)" >&2; exit 1; }
-            [ -n "${PORT_HOST:-}" ] || { echo "PORT_HOST is required (env)" >&2; exit 1; }
-            [ -n "${PORT_CONTAINER:-}" ] || { echo "PORT_CONTAINER is required (env)" >&2; exit 1; }
-            # Require backend runtime env values
-            [ -n "${DB_HOST:-}" ] || { echo "DB_HOST is required (env)" >&2; exit 1; }
-            [ -n "${DB_PORT:-}" ] || { echo "DB_PORT is required (env)" >&2; exit 1; }
-            [ -n "${DB_USER:-}" ] || { echo "DB_USER is required (env)" >&2; exit 1; }
-            [ -n "${DB_PASSWORD:-}" ] || { echo "DB_PASSWORD is required (env)" >&2; exit 1; }
-            [ -n "${DB_NAME:-}" ] || { echo "DB_NAME is required (env)" >&2; exit 1; }
-            [ -n "${JWT_SECRET:-}" ] || { echo "JWT_SECRET is required (env)" >&2; exit 1; }
-            [ -n "${NEXT_PUBLIC_BACKEND_URL:-}" ] || { echo "NEXT_PUBLIC_BACKEND_URL is required (env)" >&2; exit 1; }
-            [ -n "${RESET_LINK_BASE:-}" ] || { echo "RESET_LINK_BASE is required (env)" >&2; exit 1; }
-          '''
-        }
-      }
-    }
-
-    stage('Generate runtime env') {
-      steps {
-        script {
-          def envRuntime = """
-PORT=${env.PORT}
-GIN_MODE=${env.GIN_MODE}
-
-# PostgreSQL
-DB_HOST=${env.DB_HOST}
-DB_PORT=${env.DB_PORT}
-DB_USER=${env.DB_USER}
-DB_PASSWORD=${env.DB_PASSWORD}
-DB_NAME=${env.DB_NAME}
-DB_SSLMODE=${env.DB_SSLMODE}
-
-# Auth
-JWT_SECRET=${env.JWT_SECRET}
-JWT_TTL_SECONDS=${env.JWT_TTL_SECONDS}
-AUTH_COOKIE=false
-DEV_EXPOSE_RESET_TOKEN=false
-DEV_ALLOW_UNAUTH=false
-
-# Password reset link
-RESET_LINK_BASE=${env.RESET_LINK_BASE}
-
-# SMTP (optional)
-SMTP_HOST=${env.SMTP_HOST}
-SMTP_PORT=${env.SMTP_PORT}
-SMTP_USER=${env.SMTP_USER}
-SMTP_PASSWORD=${env.SMTP_PASSWORD}
-SMTP_FROM=${env.SMTP_FROM}
-
-# Frontend
-NEXT_PUBLIC_BACKEND_URL=${env.NEXT_PUBLIC_BACKEND_URL}
-NEXT_PUBLIC_DEV_ALLOW_UNAUTH=false
-"""
-          writeFile file: 'deploy/.env.runtime', text: envRuntime
-        }
-      }
-    }
-
-    stage('Prepare tools') {
-      steps {
-        sh 'bash -lc "set -euxo pipefail; apt-get update; apt-get install -y --no-install-recommends docker.io ca-certificates golang; docker version; go version"'
-      }
-    }
-
-    stage('Checkout') {
-      steps {
-        checkout scm
-        script {
-          // Trust mounted workspace directory for Git (fixes 'dubious ownership')
-          sh "git config --global --add safe.directory '${WORKSPACE}' || true"
-          env.BRANCH = env.BRANCH_NAME ?: sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
-          env.SHORT_SHA = env.GIT_COMMIT.take(7)
-          echo "Branch: ${env.BRANCH}, Commit: ${env.SHORT_SHA}"
-        }
-      }
-    }
-
-    stage('Go test') {
-      steps {
-        dir('backend') {
-          sh 'bash -lc "set -euxo pipefail; go mod tidy; go test ./... -cover"'
-        }
-      }
-    }
-
-    stage('Build Docker image') {
-      steps {
-        sh 'docker build -f backend/Dockerfile --target runtime -t ${IMAGE_NAME_API} backend'
-      }
-    }
-
-    stage('Deploy locally') {
-      steps {
-        script {
-          echo "🚀 Deploying ${env.IMAGE_NAME_API} on this server..."
-          sh """
-            docker rm -f ${CONTAINER_NAME_API} || true
-            docker run -d \
-              -p ${PORT_HOST}:${PORT_CONTAINER} \
-              --name ${CONTAINER_NAME_API} \
-              --restart unless-stopped \
-              -v ${STATIC_VOLUME_NAME}:/srv/static \
-              --env-file deploy/.env.runtime \
-              ${IMAGE_NAME_API}
-          """
-        }
-      }
-    }
-
-    stage('Cleanup old images') {
-      steps {
-        sh 'docker image prune -f || true'
-      }
-    }
-  }
-
-  post {
-    success {
-      echo '✅ Deployment successful!'
-    }
-    failure {
-      echo '❌ Deployment failed!'
+      archiveArtifacts artifacts: 'deploy/**, backend/Dockerfile, docker-compose.yml, README.md, backend/coverage.out, backend/test-report.xml', fingerprint: true, onlyIfSuccessful: false
+      junit testResults: 'backend/test-report.xml', allowEmptyResults: true
     }
   }
 }
