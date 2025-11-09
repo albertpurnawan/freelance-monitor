@@ -8,9 +8,9 @@ import './globals.css'
 import 'react-day-picker/dist/style.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Freelance Manager',
+  description: '',
+  generator: '',
 }
 
 export default function RootLayout({
