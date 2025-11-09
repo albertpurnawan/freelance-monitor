@@ -66,18 +66,33 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 docker version >/dev/null 2>&1 || { echo "Docker daemon not running" >&2; exit 1; }
 
-echo "[2/6] Building backend image: ${IMAGE_NAME_API} (target: ${BUILD_TARGET})"
+echo "[2/8] Building backend image: ${IMAGE_NAME_API} (target: ${BUILD_TARGET})"
 docker build -f backend/Dockerfile --target "${BUILD_TARGET}" -t "${IMAGE_NAME_API}" backend
 
-echo "[3/6] Ensuring static volume exists: ${STATIC_VOLUME_NAME}"
+echo "[3/8] Ensuring static volume exists: ${STATIC_VOLUME_NAME}"
 if ! docker volume inspect "${STATIC_VOLUME_NAME}" >/dev/null 2>&1; then
   docker volume create "${STATIC_VOLUME_NAME}" >/dev/null
 fi
 
-echo "[4/6] Stopping previous container (if any): ${CONTAINER_NAME_API}"
-docker rm -f "${CONTAINER_NAME_API}" >/dev/null 2>&1 || true
+echo "[4/8] Building frontend image: ${IMAGE_NAME_WEB}"
+IMAGE_NAME_WEB="${IMAGE_NAME_WEB:-freelance-monitor-web:latest}"
+CONTAINER_NAME_WEB="${CONTAINER_NAME_WEB:-freelance-monitor-web}"
+WEB_PORT_HOST="${WEB_PORT_HOST:-30002}"
+WEB_PORT_CONTAINER="${WEB_PORT_CONTAINER:-4000}"
+WEB_BIND_ADDRESS="${WEB_BIND_ADDRESS:-0.0.0.0}"
+NEXT_PUBLIC_BACKEND_URL_BUILD="${NEXT_PUBLIC_BACKEND_URL_BUILD:-}"
+NEXT_PUBLIC_DEV_ALLOW_UNAUTH_BUILD="${NEXT_PUBLIC_DEV_ALLOW_UNAUTH_BUILD:-false}"
 
-echo "[5/6] Starting container from ${IMAGE_NAME_API}..."
+docker build \
+  --build-arg NEXT_PUBLIC_BACKEND_URL="${NEXT_PUBLIC_BACKEND_URL_BUILD:-${NEXT_PUBLIC_BACKEND_URL:-}}" \
+  --build-arg NEXT_PUBLIC_DEV_ALLOW_UNAUTH="${NEXT_PUBLIC_DEV_ALLOW_UNAUTH_BUILD}" \
+  -f frontend/Dockerfile -t "${IMAGE_NAME_WEB}" frontend
+
+echo "[5/8] Stopping previous containers (if any)"
+docker rm -f "${CONTAINER_NAME_API}" >/dev/null 2>&1 || true
+docker rm -f "${CONTAINER_NAME_WEB}" >/dev/null 2>&1 || true
+
+echo "[6/8] Starting API container from ${IMAGE_NAME_API}..."
 env_arg=()
 if [[ -n "${ENV_FILE}" ]]; then
   if [[ ! -f "${ENV_FILE}" ]]; then
@@ -244,7 +259,14 @@ docker run -d \
      fi ) \
   "${IMAGE_NAME_API}"
 
-echo "[6/6] Waiting for health at http://127.0.0.1:${PORT_HOST}${HEALTH_PATH} (timeout: ${HEALTH_TIMEOUT}s)"
+echo "[7/8] Starting Web container from ${IMAGE_NAME_WEB}..."
+docker run -d \
+  -p "${WEB_BIND_ADDRESS}:${WEB_PORT_HOST}:${WEB_PORT_CONTAINER}" \
+  --name "${CONTAINER_NAME_WEB}" \
+  --restart unless-stopped \
+  "${IMAGE_NAME_WEB}"
+
+echo "[8/8] Waiting for API health at http://127.0.0.1:${PORT_HOST}${HEALTH_PATH} (timeout: ${HEALTH_TIMEOUT}s)"
 attempts=${HEALTH_TIMEOUT}
 until curl -fsS "http://127.0.0.1:${PORT_HOST}${HEALTH_PATH}" >/dev/null 2>&1; do
   attempts=$((attempts-1))
