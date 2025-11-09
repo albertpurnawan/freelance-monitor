@@ -36,6 +36,7 @@ BUILD_TARGET="${BUILD_TARGET:-runtime}"
 DOCKER_NETWORK="${DOCKER_NETWORK:-}"
 AUTO_START_DB="${AUTO_START_DB:-true}"
 COMPOSE_FILE="${COMPOSE_FILE:-deploy/docker-compose.prod.yml}"
+BIND_ADDRESS="${BIND_ADDRESS:-0.0.0.0}"
 
 # ENV_FILE default resolution: prefer deploy/.env, then deploy/.env.production
 ENV_FILE="${ENV_FILE:-}"
@@ -229,7 +230,7 @@ else
 fi
 
 docker run -d \
-  -p "${PORT_HOST}:${PORT_CONTAINER}" \
+  -p "${BIND_ADDRESS}:${PORT_HOST}:${PORT_CONTAINER}" \
   --name "${CONTAINER_NAME_API}" \
   --restart unless-stopped \
   -v "${STATIC_VOLUME_NAME}:/srv/static" \
