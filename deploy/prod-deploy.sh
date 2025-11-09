@@ -264,6 +264,9 @@ docker run -d \
   -p "${WEB_BIND_ADDRESS}:${WEB_PORT_HOST}:${WEB_PORT_CONTAINER}" \
   --name "${CONTAINER_NAME_WEB}" \
   --restart unless-stopped \
+  -e NEXT_TELEMETRY_DISABLED=1 \
+  -e ALLOW_INIT_DB="${ALLOW_INIT_DB:-false}" \
+  $( if [[ -n "${NEON_DATABASE_URL_WEB:-}" ]]; then echo -n "-e NEON_DATABASE_URL=${NEON_DATABASE_URL_WEB}"; fi ) \
   "${IMAGE_NAME_WEB}"
 
 echo "[8/8] Waiting for API health at http://127.0.0.1:${PORT_HOST}${HEALTH_PATH} (timeout: ${HEALTH_TIMEOUT}s)"

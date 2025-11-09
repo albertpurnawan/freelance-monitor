@@ -1,10 +1,13 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.NEON_DATABASE_URL!)
-
 export async function POST() {
   try {
+    const conn = process.env.NEON_DATABASE_URL
+    if (!conn || conn.trim() === "") {
+      return NextResponse.json({ error: "NEON_DATABASE_URL not set" }, { status: 500 })
+    }
+    const sql = neon(conn)
     console.log("[v0] Starting database initialization via API...")
 
     // Create clients table
