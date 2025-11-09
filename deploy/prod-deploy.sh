@@ -157,6 +157,15 @@ if [[ -f "${ENV_SOURCE_FILE}" ]]; then
   fi
 fi
 
+# Force container to listen on 80 unless disabled
+FORCE_CONTAINER_PORT_80="${FORCE_CONTAINER_PORT_80:-true}"
+if [[ "${FORCE_CONTAINER_PORT_80}" == "true" ]]; then
+  if [[ "${PORT_CONTAINER}" != "80" ]]; then
+    echo "Forcing API container port to 80"
+    PORT_CONTAINER="80"
+  fi
+fi
+
 # Validate required env keys exist and non-empty in the env file used
 env_val() {
   local file="$1" key="$2"; awk -F= -v k="$2" '$1==k{print substr($0,index($0,$2))}' "$file" | tail -n1 | tr -d '\r' | sed -e 's/^\s*//' -e 's/^"\(.*\)"$/\1/' -e "s/'\(.*\)'/\1/" || true
@@ -249,6 +258,7 @@ docker run -d \
   --name "${CONTAINER_NAME_API}" \
   --restart unless-stopped \
   -v "${STATIC_VOLUME_NAME}:/srv/static" \
+  --cap-add NET_BIND_SERVICE \
   --add-host=host.docker.internal:host-gateway \
   "${net_args[@]}" \
   "${env_arg[@]}" \
@@ -257,6 +267,7 @@ docker run -d \
          echo -n "-e DB_PORT=5432"; \
        fi; \
      fi ) \
+  $( if [[ "${FORCE_CONTAINER_PORT_80}" == "true" ]]; then echo -n "-e PORT=80"; fi ) \
   "${IMAGE_NAME_API}"
 
 echo "[7/8] Starting Web container from ${IMAGE_NAME_WEB}..."
@@ -264,9 +275,11 @@ docker run -d \
   -p "${WEB_BIND_ADDRESS}:${WEB_PORT_HOST}:${WEB_PORT_CONTAINER}" \
   --name "${CONTAINER_NAME_WEB}" \
   --restart unless-stopped \
+  --cap-add NET_BIND_SERVICE \
   -e NEXT_TELEMETRY_DISABLED=1 \
   -e ALLOW_INIT_DB="${ALLOW_INIT_DB:-false}" \
   $( if [[ -n "${NEON_DATABASE_URL_WEB:-}" ]]; then echo -n "-e NEON_DATABASE_URL=${NEON_DATABASE_URL_WEB}"; fi ) \
+  -e PORT=80 \
   "${IMAGE_NAME_WEB}"
 
 echo "[8/8] Waiting for API health at http://127.0.0.1:${PORT_HOST}${HEALTH_PATH} (timeout: ${HEALTH_TIMEOUT}s)"
